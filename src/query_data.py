@@ -4,9 +4,9 @@ from langchain_chroma import Chroma
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama import ChatOllama
 
+from config import DEFAULT_CORPUS, available_stores, get_chroma_path
 from get_embedding_function import get_embedding_function
 
-CHROMA_PATH = "chroma"  # must match the populate script
 K = 5  # chunks to retrieve
 LLM_MODEL = "qwen3:4b-instruct"  # an Ollama model you have pulled
 
@@ -36,7 +36,7 @@ def query_rag(query_text: str, db, llm, k: int = K, show_prompt: bool = False, s
     if show_chunks:
         show_results(results)
 
-    context_text = context_text = "\n\n---\n\n".join(
+    context_text = "\n\n---\n\n".join(
     f"[Source: {doc.metadata.get('source', '').split('/')[-1]}, p.{doc.metadata.get('page')}]\n{doc.page_content}"
     for doc, _score in results
 )
@@ -67,18 +67,26 @@ def main():
     # Create CLI.
     parser = argparse.ArgumentParser(description="Ask questions about your documents.")
     parser.add_argument(
-        "query_text",
-        type=str,
-        nargs="?",
-        help="The question. If omitted, starts an interactive session.",
-    )
+        "--corpus",
+        default=DEFAULT_CORPUS,
+        help=f"Which store to query: vector_stores/chroma_<corpus> (default: {DEFAULT_CORPUS}).",
+    ) # change the corpus to run the rag for 
     parser.add_argument("-k", type=int, default=K, help=f"Chunks to retrieve (default {K}).")
     parser.add_argument("--show-prompt", action="store_true", help="Print the full prompt sent to the LLM.")
     parser.add_argument("--show-chunks", action="store_true", help="Print each retrieved chunk with its score.")
     args = parser.parse_args()
 
     # Build the database connection and the LLM ONCE; every question reuses them.
-    db = Chroma(persist_directory=CHROMA_PATH, embedding_function=get_embedding_function())
+    chroma_path = get_chroma_path(args.corpus)
+    if not chroma_path.is_dir():
+        # Chroma would silently create an empty store here, so stop with a clear message.
+        hint = " (the default corpus; pass --corpus NAME to choose another)" if args.corpus == DEFAULT_CORPUS else ""
+        raise SystemExit(
+            f"No store for corpus '{args.corpus}'{hint} at {chroma_path}.\n"
+            f"Build it with: python src/populate_database.py --corpus {args.corpus}\n"
+            f"Stores found: {available_stores() or 'none'}"
+        )
+    db = Chroma(persist_directory=str(chroma_path), embedding_function=get_embedding_function())
     llm = ChatOllama(
         model=LLM_MODEL,
         reasoning=False,   # no effect on instruct models; stops thinking on hybrid ones
@@ -86,22 +94,22 @@ def main():
         num_predict=512,   # hard cap on answer length, so it cannot run forever
         temperature=0.2,   # low = sticks closer to the context
     )
-    print(f"Chunks in database: {len(db.get(include=[])['ids'])}")
+    print(f"Corpus: {args.corpus}  |  Chunks in database: {len(db.get(include=[])['ids'])}")
 
-    options = dict(k=args.k, show_prompt=args.show_prompt, show_chunks=args.show_chunks)
+    options = dict(k=args.k, show_prompt=args.show_prompt, show_chunks=args.show_chunks) 
 
     # Otherwise: interactive session, reusing db and llm for every question.
     while True:
         try:
-            q = input("\nQuestion (or 'quit'): ").strip()
+            user_input = input("\nQuestion (or 'quit'): ").strip()
         except (EOFError, KeyboardInterrupt):  # Ctrl-D / Ctrl-C
             print()
             break
-        if q.lower() in ("quit", "exit"):
+        if user_input.lower() in ("quit", "exit"):
             break
-        if not q:
+        if not user_input:
             continue
-        query_rag(q, db, llm, **options)
+        query_rag(user_input, db, llm, **options)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,4 @@
 import argparse
-import os
 import shutil
 from pathlib import Path
 
@@ -10,10 +9,8 @@ from langchain_core.documents import Document
 from langchain_docling import DoclingLoader
 from transformers import AutoTokenizer
 
+from config import DEFAULT_CORPUS, available_corpora, get_chroma_path, get_data_path
 from get_embedding_function import get_embedding_function
-
-CHROMA_PATH = "chroma"
-DATA_PATH = "data"
 
 # Tokenizer + max chunk size used by the chunker. Change these to match your embedding model.
 # Larger MAX_TOKENS = bigger chunks with more surrounding context; smaller = more precise but fragmented.
@@ -23,23 +20,47 @@ MAX_TOKENS = 512
 
 
 def main():
-    # Check if the database should be cleared (using the --reset flag).
     parser = argparse.ArgumentParser()
-    parser.add_argument("--reset", action="store_true", help="Reset the database.")
+    parser.add_argument(
+        "--corpus",
+        default=DEFAULT_CORPUS,
+        help=f"Folder name under data/ to build a store from (default: {DEFAULT_CORPUS}).",
+    ) 
+   # set current corpus, defaults to DEFAULT_CORPUS in config.py, any other corpus should match the folder name within data 
+   # i.e. data/hh/... enter --corpus hh 
+   
+    parser.add_argument("--reset", action="store_true", help="Reset this corpus's database first.")
     args = parser.parse_args()
+
+    # Both paths come from the corpus name: data/<corpus> and vector_stores/chroma_<corpus>.
+    data_path = get_data_path(args.corpus)
+    chroma_path = get_chroma_path(args.corpus)
+    if not data_path.is_dir():
+        hint = " (the default corpus; pass --corpus NAME to choose another)" if args.corpus == DEFAULT_CORPUS else ""
+        raise SystemExit(
+            f"No folder {data_path}{hint}.\n"
+            f"Corpora found under data/: {available_corpora() or 'none'}"
+        ) 
+    # if missing corpus is default, hint clarifies why the DEFAULT_CORPUS name was shown in the folder path (e.g. mash)
+    # if someone types a wrong name, message skips default corpus hint, uses what their data folder path should be
+    print(f"Corpus: {args.corpus}  (PDFs: {data_path}, store: {chroma_path})")
+
+    # Check if the database should be cleared (using the --reset flag).
     if args.reset:
         print("✨ Clearing Database")
-        clear_database()
+        clear_database(chroma_path)
 
     # Create (or update) the data store.
     # Docling chunks while it loads, so there is no separate split step.
-    chunks = load_documents()
-    add_to_chroma(chunks)
+    chunks = load_documents(data_path)
+    add_to_chroma(chunks, chroma_path)
 
 
-def load_documents():
-    # Reads every PDF in DATA_PATH and returns Docling chunks (one Document per chunk).
-    pdf_paths = [str(p) for p in Path(DATA_PATH).glob("*.pdf")]
+def load_documents(data_path):
+    # Reads every PDF in data_path and returns Docling chunks (one Document per chunk).
+    pdf_paths = [str(p) for p in data_path.glob("*.pdf")]
+    if not pdf_paths:
+        raise SystemExit(f"No PDFs found in {data_path}")
     chunker = HybridChunker(
         tokenizer=HuggingFaceTokenizer(
             tokenizer=AutoTokenizer.from_pretrained(TOKENIZER_ID),
@@ -59,14 +80,14 @@ def get_pages(chunk):
 
 
 def calculate_chunk_ids(chunks):
-    # This will create IDs like "data/paper.pdf:3:2"
+    # This will create IDs like "paper.pdf:3:2"
     # Source : Page Number (first page of the chunk) : Chunk Index on that page
 
     last_page_id = None
     current_chunk_index = 0
 
     for chunk in chunks:
-        source = chunk.metadata.get("source")
+        source = Path(chunk.metadata.get("source")).name
         page = get_pages(chunk)[0]
         current_page_id = f"{source}:{page}"
 
@@ -97,7 +118,7 @@ def flatten_metadata(chunk):
     return Document(
         page_content=chunk.page_content,
         metadata={
-            "source": chunk.metadata["source"],
+            "source": Path(chunk.metadata["source"]).name,  # filename only, no machine path
             "page": chunk.metadata["page"],
             "headings": " > ".join(chunk.metadata["dl_meta"].get("headings", [])),
             "id": chunk.metadata["id"],
@@ -105,10 +126,10 @@ def flatten_metadata(chunk):
     )
 
 
-def add_to_chroma(chunks: list[Document]):
+def add_to_chroma(chunks: list[Document], chroma_path):
     # Load the existing database.
     db = Chroma(
-        persist_directory=CHROMA_PATH, embedding_function=get_embedding_function()
+        persist_directory=str(chroma_path), embedding_function=get_embedding_function()
     )
 
     # Calculate Page IDs (also sets metadata["page"]).
@@ -133,9 +154,9 @@ def add_to_chroma(chunks: list[Document]):
         print("✅ No new documents to add")
 
 
-def clear_database():
-    if os.path.exists(CHROMA_PATH):
-        shutil.rmtree(CHROMA_PATH)
+def clear_database(chroma_path):
+    if chroma_path.exists():
+        shutil.rmtree(chroma_path)
 
 
 if __name__ == "__main__":
