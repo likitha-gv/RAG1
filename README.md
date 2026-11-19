@@ -12,7 +12,7 @@ Ask questions about a set of PDFs using local models. PDFs are parsed and chunke
    Ollama must be running (the desktop app, or `ollama serve`) whenever you build or query.
 2. Install the Python packages:
    ```
-   pip install docling langchain-docling langchain-chroma langchain-ollama langchain-core transformers
+   pip install docling langchain-docling langchain-chroma langchain-ollama langchain-core transformers 
    ```
 3. Put your PDFs in a folder under `data/`, one folder per document set, e.g. `data/my_corpus/` (not tracked by git).
 

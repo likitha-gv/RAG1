@@ -19,3 +19,9 @@ venv/
 
 # Secrets
 .env
+
+# Claude
+.CLAUDE.md
+
+# Changelog
+.CHANGELOG.md
