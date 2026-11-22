@@ -1,3 +1,7 @@
+"""The current approach results in test failure for almost all queries. Current scope is to record expected vs output in JSON,
+    to evaluate performance and compare to Klea. Likely will be replaced by the WIP evaluation benchmarking package, so this will be kept
+    simple in scope."""
+
 import json
 
 import pytest
