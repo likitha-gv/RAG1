@@ -21,7 +21,10 @@ venv/
 .env
 
 # Claude
-.CLAUDE.md
+CLAUDE.md
 
 # Changelog
-.CHANGELOG.md
+CHANGELOG.md
+
+# Test output
+tests/results.jsonl
