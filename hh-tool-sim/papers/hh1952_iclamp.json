@@ -1,0 +1,65 @@
+{
+  "paper": "Hodgkin & Huxley 1952, J Physiol 117:500-544",
+  "model_type": "classic_hh",
+  "notes": "The original paper uses a different voltage convention (rest at 0 mV, depolarisation negative). Values here are the modern equivalent (rest near -65 mV) used by the OpenWorm tutorial.",
+  "cell": {
+    "C_m": {
+      "value": 1.0,
+      "unit": "uF/cm^2",
+      "quote": "TODO",
+      "location": "TODO",
+      "status": "reported"
+    },
+    "gmax_Na": {
+      "value": 120.0,
+      "unit": "mS/cm^2",
+      "quote": "TODO",
+      "location": "TODO",
+      "status": "reported"
+    },
+    "gmax_K": {
+      "value": 36.0,
+      "unit": "mS/cm^2",
+      "quote": "TODO",
+      "location": "TODO",
+      "status": "reported"
+    },
+    "gmax_L": {
+      "value": 0.3,
+      "unit": "mS/cm^2",
+      "quote": "TODO",
+      "location": "TODO",
+      "status": "reported"
+    },
+    "E_Na": {
+      "value": 50.0,
+      "unit": "mV",
+      "quote": "TODO",
+      "location": "TODO",
+      "status": "reported"
+    },
+    "E_K": {
+      "value": -77.0,
+      "unit": "mV",
+      "quote": "TODO",
+      "location": "TODO",
+      "status": "reported"
+    },
+    "E_L": {
+      "value": -54.387,
+      "unit": "mV",
+      "quote": "TODO",
+      "location": "TODO",
+      "status": "reported"
+    }
+  },
+  "protocol": {
+    "kind": "iclamp",
+    "I_inj_amplitude": 10,
+    "I_inj_delay": 50,
+    "I_inj_duration": 100,
+    "t_n": 200,
+    "temperature": 6.3
+  },
+  "reported_outcomes": []
+}

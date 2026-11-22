@@ -7,6 +7,7 @@ vector_stores/
 
 # Python
 __pycache__/
+.pytest_cache/
 *.pyc
 .venv/
 venv/
@@ -21,7 +22,11 @@ venv/
 .env
 
 # Claude
-.CLAUDE.md
+CLAUDE.md
 
 # Changelog
-.CHANGELOG.md
+CHANGELOG.md
+
+# HH tool
+hh-tool-sim/CLAUDE.md
+hh-tool-sim/hh_py_v.dat
