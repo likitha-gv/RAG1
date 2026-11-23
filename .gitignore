@@ -27,6 +27,8 @@ CLAUDE.md
 # Changelog
 CHANGELOG.md
 
+# Test output
+tests/results.jsonl
+
 # HH tool
-hh-tool-sim/CLAUDE.md
-hh-tool-sim/hh_py_v.dat
+hh_py_v.dat
